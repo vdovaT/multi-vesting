@@ -11,14 +11,15 @@ contract MultiVesting is Ownable
 
     struct Vesting {
         uint256 startedAt; // Timestamp in seconds
-        uint256 totalAmount; // Vested amount PMA in PMA
+        uint256 totalAmount; // Vested amount AMY in AMY
         uint256 releasedAmount; // Amount that beneficiary withdraw
     }
 
     // ===============================================================================================================
     // Constants
     // ===============================================================================================================
-    uint256 public constant STEPS_AMOUNT = 25; // 25 steps, each step unlock 4% of funds after 30 days
+
+    uint256 public constant STEPS_AMOUNT = 100; // 100 steps, each step unlock 1% of funds after 7 days
 
     // ===============================================================================================================
     // Members
@@ -56,10 +57,14 @@ contract MultiVesting is Ownable
         require(_startedAt >= now, "TIMESTAMP_CANNOT_BE_IN_THE_PAST");
         require(_startedAt <= (now + 180 days), "TIMESTAMP_CANNOT_BE_MORE_THAN_A_180_DAYS_IN_FUTURE");
         require(_amount >= STEPS_AMOUNT, "VESTING_AMOUNT_TO_LOW");
+
+        //Fix
+        token.safeTransferFrom(msg.sender, address(this), _amount);
+
         uint256 debt = totalVestedAmount.sub(totalReleasedAmount);
         uint256 available = token.balanceOf(address(this)).sub(debt);
 
-        require(available >= _amount, "DON_T_HAVE_ENOUGH_PMA");
+        require(available >= _amount, "DON_T_HAVE_ENOUGH_AMY");
 
         Vesting memory v = Vesting({
             startedAt : _startedAt,
@@ -165,21 +170,21 @@ contract MultiVesting is Ownable
 
         Vesting memory vesting = vestingMap[_beneficiary][_vestingId];
 
-        uint256 rewardPerMonth = vesting.totalAmount.div(STEPS_AMOUNT);
+        uint256 rewardPerWeek = vesting.totalAmount.div(STEPS_AMOUNT);
 
-        // 25 Month (%4 per month)
-        uint256 monthPassed = _timestamp
+        // 100 Week (%1 per Week)
+        uint256 weekPassed = _timestamp
             .sub(vesting.startedAt)
-            .div(30 days); // We say that 1 month is always 30 days
+            .div(7 days); // We say that 1 Week is always 7 days
 
         uint256 alreadyReleased = vesting.releasedAmount;
 
-        // In 25 month 100% of tokens is already released:
-        if (monthPassed >= STEPS_AMOUNT) {
+        // In 100 Week 100% of tokens is already released:
+        if (weekPassed >= STEPS_AMOUNT) {
             return vesting.totalAmount.sub(alreadyReleased);
         }
 
-        return rewardPerMonth.mul(monthPassed).sub(alreadyReleased);
+        return rewardPerWeek.mul(weekPassed).sub(alreadyReleased);
     }
 
     /// @notice Returns amount of unallocated funds that contract owner can withdraw
