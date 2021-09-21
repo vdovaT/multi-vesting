@@ -16,6 +16,13 @@ contract MultiVesting is Ownable
     }
 
     // ===============================================================================================================
+    // Events
+    // ===============================================================================================================
+
+    event NewVesting(address _receiver, uint _startAt, uint _amount);
+    event Withdraw(address _receiver, uint _amount, uint _time);
+
+    // ===============================================================================================================
     // Constants
     // ===============================================================================================================
 
@@ -58,9 +65,6 @@ contract MultiVesting is Ownable
         require(_startedAt <= (now + 180 days), "TIMESTAMP_CANNOT_BE_MORE_THAN_A_180_DAYS_IN_FUTURE");
         require(_amount >= STEPS_AMOUNT, "VESTING_AMOUNT_TO_LOW");
 
-        //Fix
-        token.safeTransferFrom(msg.sender, address(this), _amount);
-
         uint256 debt = totalVestedAmount.sub(totalReleasedAmount);
         uint256 available = token.balanceOf(address(this)).sub(debt);
 
@@ -74,6 +78,8 @@ contract MultiVesting is Ownable
 
         vestingMap[_beneficiary].push(v);
         totalVestedAmount = totalVestedAmount.add(_amount);
+
+        emit NewVesting(_beneficiary, _startedAt, _amount);
     }
 
     /// @notice Method that allows a beneficiary to withdraw their allocated funds for a specific vesting ID.
@@ -89,6 +95,8 @@ contract MultiVesting is Ownable
         // Increased total released in contract
         totalReleasedAmount = totalReleasedAmount.add(amount);
         token.safeTransfer(msg.sender, amount);
+
+        emit Withdraw(msg.sender, amount, now);
     }
 
     /// @notice Method that allows a beneficiary to withdraw all their allocated funds.
